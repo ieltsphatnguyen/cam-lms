@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .clickable-name {
+    @apply cursor-pointer transition hover:text-blue-600 hover:underline;
+  }
+}
