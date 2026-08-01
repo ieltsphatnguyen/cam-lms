@@ -33,7 +33,6 @@ import {
   fetchTemplates,
   fetchDrafts,
   fetchDraftItems,
-  resolveTemplateToDraft,
   deleteDraft,
   duplicateDraft,
   fetchClassesForFilter,
@@ -130,9 +129,6 @@ export default function TeacherAssignmentsPage() {
   const [presets, setPresets] = useState<AssignmentTemplateWithDetails[]>([]);
   const [selectedPreset, setSelectedPreset] =
     useState<AssignmentTemplateWithDetails | null>(null);
-  // Pending preset: selected before the draft row exists. Resolved once the
-  // draft is created (class + name filled).
-  const [pendingPreset, setPendingPreset] = useState<AssignmentTemplateWithDetails | null>(null);
 
   // Draft state (the live assignment being built)
   const [draftId, setDraftId] = useState<number | null>(null);
@@ -232,17 +228,25 @@ export default function TeacherAssignmentsPage() {
   }, [view, currentUserId, isAdmin]);
 
   // ── Start new assignment ───────────────────────────────────
+  // Creates the draft row immediately so the editor always edits an
+  // existing draft. No placeholder name/class — the schema allows both
+  // to be null until the teacher fills them in.
 
-  function startNewAssignment() {
+  async function startNewAssignment() {
+    setError(null);
+    setView('edit');
     setSelectedClassId('');
     setAssignmentName('');
     setAssignmentDescription('');
     setSelectedPreset(null);
-    setDraftId(null);
     setDraftItems([]);
-    setPendingPreset(null);
-    setError(null);
-    setView('edit');
+    setDraftId(null);
+    try {
+      const id = await createEmptyDraft(null, null, null);
+      setDraftId(id);
+    } catch {
+      setError('Failed to create assignment. Please try again.');
+    }
   }
 
   // ── Edit existing draft ────────────────────────────────────
@@ -256,7 +260,6 @@ export default function TeacherAssignmentsPage() {
     setDraftId(d.id);
     setDraftItems([]);
     setSelectedPreset(null);
-    setPendingPreset(null);
 
     // If the draft has a template_id, find the matching preset
     if (d.template_id) {
@@ -276,107 +279,66 @@ export default function TeacherAssignmentsPage() {
   }
 
   // ── Preset selection ────────────────────────────────────────
-  // Selecting a preset must immediately replace Assignment Items.
-  // If the draft already exists, we resolve the template into draft
-  // questions right away. If not, we defer until the draft is created.
+  // The draft always exists, so selecting a preset resolves it into
+  // draft questions immediately.
 
   async function handleSelectPreset(p: AssignmentTemplateWithDetails) {
     setSelectedPreset(p);
-    setPendingPreset(null);
     if (!assignmentName.trim()) {
       setAssignmentName(p.name);
       setAssignmentDescription(p.description ?? '');
     }
-
-    // If the draft already exists, replace its questions immediately.
-    if (draftId) {
-      setSaving(true);
-      try {
-        const items = await replaceDraftFromTemplate(
-          draftId,
-          p.id,
-          selectedClassId || null,
-        );
-        setDraftItems(items);
-      } catch {
-        setError('Failed to apply preset to assignment.');
-      } finally {
-        setSaving(false);
-      }
-    } else {
-      // Defer — resolve once the draft row is created.
-      setPendingPreset(p);
-    }
-  }
-
-  async function handleClearPreset() {
-    setSelectedPreset(null);
-    setPendingPreset(null);
-
-    // If the draft already exists, clear its questions.
-    if (draftId) {
-      setSaving(true);
-      try {
-        await clearDraftQuestions(draftId);
-        setDraftItems([]);
-      } catch {
-        setError('Failed to clear assignment questions.');
-      } finally {
-        setSaving(false);
-      }
-    }
-  }
-
-  // ── Auto-save draft when class/name changes ────────────────
-
-  // Create the draft row automatically when both class and name are provided.
-  // If a pendingPreset exists, resolve it into draft questions immediately.
-  async function ensureDraftCreated(): Promise<number | null> {
-    if (draftId) return draftId;
-    if (!selectedClassId || !assignmentName.trim()) return null;
+    if (!draftId) return;
 
     setSaving(true);
     try {
-      if (selectedPreset || pendingPreset) {
-        const preset = selectedPreset ?? pendingPreset;
-        const result = await resolveTemplateToDraft(
-          preset!.id,
-          selectedClassId || null,
-          assignmentName.trim(),
-          assignmentDescription.trim() || null,
-        );
-        setDraftId(result.draft_id);
-        setPendingPreset(null);
-        await loadDraftItems(result.draft_id);
-        return result.draft_id;
-      } else {
-        const id = await createEmptyDraft(
-          selectedClassId,
-          assignmentName.trim(),
-          assignmentDescription.trim() || null,
-        );
-        setDraftId(id);
-        setDraftItems([]);
-        return id;
-      }
+      const items = await replaceDraftFromTemplate(
+        draftId,
+        p.id,
+        selectedClassId || null,
+      );
+      setDraftItems(items);
+      if (assignmentName.trim()) await updateDraftMeta(assignmentName, assignmentDescription, selectedClassId);
     } catch {
-      setError('Failed to create assignment. Please try again.');
-      return null;
+      setError('Failed to apply preset to assignment.');
     } finally {
       setSaving(false);
     }
   }
 
-  // Update draft name/description/class when they change (if draft already exists)
-  async function updateDraftMeta() {
+  async function handleClearPreset() {
+    setSelectedPreset(null);
+    if (!draftId) return;
+
+    setSaving(true);
+    try {
+      await clearDraftQuestions(draftId);
+      setDraftItems([]);
+    } catch {
+      setError('Failed to clear assignment questions.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ── Auto-save draft metadata ────────────────────────────────
+  // The draft always exists, so edits persist directly. Accepts the new
+  // values as arguments so callers can pass fresh state without waiting
+  // for a re-render.
+
+  async function updateDraftMeta(
+    name: string,
+    description: string,
+    classId: number | '',
+  ) {
     if (!draftId) return;
     try {
       const { error: uErr } = await supabase
         .from('assignment_drafts')
         .update({
-          name: assignmentName.trim(),
-          description: assignmentDescription.trim() || null,
-          class_id: selectedClassId || null,
+          name: name.trim() || null,
+          description: description.trim() || null,
+          class_id: classId || null,
         })
         .eq('id', draftId);
       if (uErr) throw uErr;
@@ -487,8 +449,8 @@ export default function TeacherAssignmentsPage() {
   //   - Questions already in draft and still checked → no-op
   // Duplicate IDs are impossible because we diff against existing items.
   async function handleAddSelectedQuestions() {
-    const id = await ensureDraftCreated();
-    if (!id) return;
+    if (!draftId) return;
+    const id = draftId;
     setAddingBatch(true);
     try {
       const existingIds = new Set(draftItems.map((item) => item.question_id));
@@ -530,8 +492,8 @@ export default function TeacherAssignmentsPage() {
   }
 
   async function handleQuestionSaveChoice(choice: 'assignment' | 'bank') {
-    const id = await ensureDraftCreated();
-    if (!id || !newQuestionData) return;
+    if (!draftId || !newQuestionData) return;
+    const id = draftId;
     try {
       await addQuestionToDraft(id, newQuestionData.id);
       if (choice === 'assignment') {
@@ -594,10 +556,22 @@ export default function TeacherAssignmentsPage() {
     }
   }
 
-  // ── Publish (entry point only) ─────────────────────────────
+  // ── Publish ────────────────────────────────────────────────
+  // Drafts may be incomplete, but publishing requires a target class,
+  // an assignment name, and at least one assignment item.
 
   async function handlePublish() {
     if (!draftId) return;
+    const missing: string[] = [];
+    if (!selectedClassId) missing.push('a target class');
+    if (!assignmentName.trim()) missing.push('an assignment name');
+    if (draftItems.length === 0) missing.push('at least one assignment item');
+    if (missing.length > 0) {
+      setError(
+        `Cannot publish — please add ${missing.join(', ')} before publishing.`,
+      );
+      return;
+    }
     setPublishing(true);
     try {
       setError('Publishing will be available in the next milestone.');
@@ -646,7 +620,9 @@ export default function TeacherAssignmentsPage() {
   // ════════════════════════════════════════════════════════════
 
   if (view === 'edit') {
-    const canSave = selectedClassId !== '' && assignmentName.trim() !== '';
+    // The draft always exists, so editing is available immediately.
+    // Required-field validation lives in the publish workflow.
+    const canSave = draftId !== null;
 
     return (
       <div className="p-6 md:p-8">
@@ -697,8 +673,9 @@ export default function TeacherAssignmentsPage() {
                 <select
                   value={selectedClassId}
                   onChange={(e) => {
-                    setSelectedClassId(e.target.value ? parseInt(e.target.value) : '');
-                    if (draftId) updateDraftMeta();
+                    const v = e.target.value ? parseInt(e.target.value) : '';
+                    setSelectedClassId(v);
+                    if (draftId) updateDraftMeta(assignmentName, assignmentDescription, v);
                   }}
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
                 >
@@ -719,8 +696,9 @@ export default function TeacherAssignmentsPage() {
                 <input
                   value={assignmentName}
                   onChange={(e) => {
-                    setAssignmentName(e.target.value);
-                    if (draftId) updateDraftMeta();
+                    const v = e.target.value;
+                    setAssignmentName(v);
+                    if (draftId) updateDraftMeta(v, assignmentDescription, selectedClassId);
                   }}
                   placeholder="e.g. IELTS Practice Week 3"
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
@@ -736,8 +714,9 @@ export default function TeacherAssignmentsPage() {
                 <textarea
                   value={assignmentDescription}
                   onChange={(e) => {
-                    setAssignmentDescription(e.target.value);
-                    if (draftId) updateDraftMeta();
+                    const v = e.target.value;
+                    setAssignmentDescription(v);
+                    if (draftId) updateDraftMeta(assignmentName, v, selectedClassId);
                   }}
                   rows={3}
                   placeholder="Assignment description..."
@@ -816,14 +795,11 @@ export default function TeacherAssignmentsPage() {
               </Button>
             </div>
 
-            {!canSave ? (
+            {!draftId ? (
               <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 py-20 text-center">
-                <ClipboardList size={40} className="text-slate-300" />
+                <LoadingSpinner size="md" />
                 <p className="mt-4 text-sm font-medium text-slate-500">
-                  Select a class and name your assignment to begin
-                </p>
-                <p className="mt-1 text-xs text-slate-400">
-                  The editor will activate once both fields are filled
+                  Creating assignment...
                 </p>
               </div>
             ) : loadingItems ? (
@@ -862,8 +838,7 @@ export default function TeacherAssignmentsPage() {
                   icon={<Save size={16} />}
                   loading={saving}
                   onClick={async () => {
-                    await ensureDraftCreated();
-                    if (draftId) await updateDraftMeta();
+                    if (draftId) await updateDraftMeta(assignmentName, assignmentDescription, selectedClassId);
                     loadDrafts();
                     setView('list');
                   }}
@@ -874,7 +849,6 @@ export default function TeacherAssignmentsPage() {
                   icon={<Send size={16} />}
                   onClick={handlePublish}
                   loading={publishing}
-                  disabled={draftItems.length === 0}
                 >
                   Publish
                 </Button>

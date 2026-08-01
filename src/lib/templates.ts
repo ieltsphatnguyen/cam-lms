@@ -535,9 +535,11 @@ export async function resolveTemplateToDraft(
 }
 
 // ── Create an empty draft (no template) ─────────────────────
+// All fields are optional — the draft is the working document from the
+// moment it is created. Validation of required fields happens at publish.
 export async function createEmptyDraft(
-  classId: number,
-  draftName: string,
+  classId: number | null,
+  draftName: string | null,
   draftDescription: string | null,
 ): Promise<number> {
   const { data, error } = await supabase
