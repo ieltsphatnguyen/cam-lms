@@ -65,7 +65,7 @@ export default function TeacherQuestionLibraryPage() {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [ownerFilter, setOwnerFilter] = useState<string>('mine');
+  const [ownerFilter, setOwnerFilter] = useState<string>('everyone');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState<number | ''>('');
   const [responseTypeFilter, setResponseTypeFilter] = useState<
@@ -236,13 +236,13 @@ export default function TeacherQuestionLibraryPage() {
       typeFilter ||
       responseTypeFilter ||
       tagFilter ||
-      ownerFilter !== 'mine' ||
+      ownerFilter !== 'everyone' ||
       statusFilter !== 'active',
     [categoryFilter, typeFilter, responseTypeFilter, tagFilter, ownerFilter, statusFilter],
   );
 
   function clearFilters() {
-    setOwnerFilter('mine');
+    setOwnerFilter('everyone');
     setCategoryFilter('');
     setTypeFilter('');
     setResponseTypeFilter('');
