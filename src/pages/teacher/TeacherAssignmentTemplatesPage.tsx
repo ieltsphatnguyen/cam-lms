@@ -33,6 +33,7 @@ import {
   restoreTemplate,
   duplicateTemplate,
   fetchTeachersForFilter,
+  setTemplateRandomRules,
   DuplicateTemplateError,
   type TemplateFilters,
 } from '@/lib/templates';
@@ -41,6 +42,7 @@ import type {
   AssignmentTemplateWithDetails,
   QuestionWithDetails,
 } from '@/types/database';
+import type { TemplateFormData } from '@/components/templates/TemplateForm';
 
 type View = 'list' | 'create' | 'edit';
 
@@ -115,18 +117,17 @@ export default function TeacherAssignmentTemplatesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-  async function handleCreate(data: {
-    name: string;
-    description: string;
-    questionIds: number[];
-  }) {
+  async function handleCreate(data: TemplateFormData) {
     setSubmitting(true);
     setError(null);
     try {
-      await createTemplate(
+      const template = await createTemplate(
         { name: data.name, description: data.description || null },
         data.questionIds,
       );
+      if (data.randomRules.length > 0) {
+        await setTemplateRandomRules(template.id, data.randomRules);
+      }
       setView('list');
     } catch (err) {
       if (err instanceof DuplicateTemplateError) {
@@ -139,11 +140,7 @@ export default function TeacherAssignmentTemplatesPage() {
     }
   }
 
-  async function handleUpdate(data: {
-    name: string;
-    description: string;
-    questionIds: number[];
-  }) {
+  async function handleUpdate(data: TemplateFormData) {
     if (!editingTemplate) return;
     setSubmitting(true);
     setError(null);
@@ -153,6 +150,7 @@ export default function TeacherAssignmentTemplatesPage() {
         description: data.description || null,
       });
       await updateTemplateQuestions(editingTemplate.id, data.questionIds);
+      await setTemplateRandomRules(editingTemplate.id, data.randomRules);
       setEditingTemplate(null);
       setView('list');
     } catch (err) {
@@ -261,6 +259,7 @@ export default function TeacherAssignmentTemplatesPage() {
 
         <div className="mx-auto max-w-3xl rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
           <TemplateForm
+            templateId={editingTemplate?.id}
             initialName={editingTemplate?.name ?? ''}
             initialDescription={editingTemplate?.description ?? ''}
             initialQuestionIds={editingQuestionIds}

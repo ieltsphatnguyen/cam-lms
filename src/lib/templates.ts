@@ -3,9 +3,14 @@ import { QUESTION_TYPE_IDS } from '@/lib/questions';
 import type {
   AssignmentTemplate,
   AssignmentTemplateWithDetails,
+  AssignmentDraft,
+  AssignmentDraftWithDetails,
   DuplicateTemplateResult,
   Question,
   QuestionWithDetails,
+  RandomQuestionRule,
+  RandomRuleInput,
+  ResolveResult,
   TemplateStatus,
 } from '@/types/database';
 
@@ -316,5 +321,206 @@ export async function fetchTeachersForFilter(): Promise<
   return (data ?? []).map((row) => ({
     id: row.id as string,
     display_name: (row.display_name as string) || 'Unknown',
+  }));
+}
+
+// ── Random Question Rules ──────────────────────────────────
+
+export async function fetchTemplateRandomRules(
+  templateId: number,
+): Promise<RandomQuestionRule[]> {
+  const { data, error } = await supabase
+    .from('assignment_template_random_rules')
+    .select('*')
+    .eq('template_id', templateId)
+    .order('rule_order', { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as RandomQuestionRule[];
+}
+
+export async function setTemplateRandomRules(
+  templateId: number,
+  rules: RandomRuleInput[],
+): Promise<void> {
+  const { error: dError } = await supabase
+    .from('assignment_template_random_rules')
+    .delete()
+    .eq('template_id', templateId);
+  if (dError) throw dError;
+
+  if (rules.length > 0) {
+    const rows = rules.map((r, idx) => ({
+      template_id: templateId,
+      rule_order: idx,
+      question_type_id: r.question_type_id,
+      response_type: r.response_type,
+      category: r.category || null,
+      tags: r.tags && r.tags.length > 0 ? r.tags : null,
+    }));
+    const { error: iError } = await supabase
+      .from('assignment_template_random_rules')
+      .insert(rows);
+    if (iError) throw iError;
+  }
+}
+
+// ── Assignment Drafts ──────────────────────────────────────
+
+export interface DraftFilters {
+  ownerId?: string | 'mine' | 'everyone';
+  status?: 'draft' | 'published' | 'all';
+  search?: string;
+  classId?: number;
+}
+
+export async function fetchDrafts(
+  currentUserId: string,
+  filters: DraftFilters = {},
+): Promise<AssignmentDraftWithDetails[]> {
+  let query = supabase.from('assignment_drafts').select(
+    '*, profiles!assignment_drafts_owner_id_fkey(display_name), classes(name), assignment_templates(name)',
+  );
+
+  if (filters.ownerId === 'mine') {
+    query = query.eq('owner_id', currentUserId);
+  } else if (filters.ownerId === 'everyone') {
+    // no filter
+  } else if (filters.ownerId) {
+    query = query.eq('owner_id', filters.ownerId);
+  } else {
+    query = query.eq('owner_id', currentUserId);
+  }
+
+  if (filters.status === 'draft' || filters.status === 'published') {
+    query = query.eq('status', filters.status);
+  }
+
+  if (filters.classId) {
+    query = query.eq('class_id', filters.classId);
+  }
+
+  if (filters.search) {
+    query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+  }
+
+  query = query.order('updated_at', { ascending: false });
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const draftIds = (data ?? []).map((d) => d.id);
+  let counts: Record<number, number> = {};
+  if (draftIds.length > 0) {
+    const { data: countData } = await supabase
+      .from('assignment_draft_questions')
+      .select('draft_id')
+      .in('draft_id', draftIds);
+    counts = (countData ?? []).reduce<Record<number, number>>((acc, row) => {
+      acc[row.draft_id as number] = (acc[row.draft_id as number] ?? 0) + 1;
+      return acc;
+    }, {});
+  }
+
+  return (data ?? []).map((row) => {
+    const profile = row.profiles as unknown as { display_name: string } | null;
+    const cls = row.classes as unknown as { name: string } | null;
+    const tmpl = row.assignment_templates as unknown as { name: string } | null;
+    return {
+      ...row,
+      owner_display_name: profile?.display_name ?? 'Unknown',
+      question_count: counts[row.id as number] ?? 0,
+      class_name: cls?.name ?? null,
+      template_name: tmpl?.name ?? null,
+    } as AssignmentDraftWithDetails;
+  });
+}
+
+export async function fetchDraft(
+  id: number,
+): Promise<AssignmentDraft | null> {
+  const { data, error } = await supabase
+    .from('assignment_drafts')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data as AssignmentDraft | null;
+}
+
+export async function fetchDraftQuestions(
+  draftId: number,
+): Promise<QuestionWithDetails[]> {
+  const { data: junctions, error: jError } = await supabase
+    .from('assignment_draft_questions')
+    .select('question_id, selection_order')
+    .eq('draft_id', draftId);
+
+  if (jError) throw jError;
+  if (!junctions || junctions.length === 0) return [];
+
+  const questionIds = junctions.map((j) => j.question_id as number);
+  const orderMap = new Map<number, number>();
+  junctions.forEach((j) => {
+    orderMap.set(j.question_id as number, j.selection_order as number);
+  });
+
+  const { data: questions, error: qError } = await supabase
+    .from('questions')
+    .select('*, questiontypes!inner(name)')
+    .in('id', questionIds);
+
+  if (qError) throw qError;
+
+  const result = (questions ?? []).map((row) => {
+    const qt = row.questiontypes as unknown as { name: string };
+    return {
+      ...row,
+      type_name: qt?.name ?? 'Unknown',
+      selection_order: orderMap.get(row.id as number) ?? 0,
+      owner_display_name: '',
+    } as QuestionWithDetails & { selection_order: number };
+  });
+
+  return applyCanonicalOrder(result);
+}
+
+export async function resolveTemplateToDraft(
+  templateId: number,
+  classId: number | null,
+  draftName: string,
+  draftDescription: string | null,
+  ownerId: string,
+): Promise<ResolveResult> {
+  const { data, error } = await supabase.rpc('resolve_template_to_draft', {
+    p_template_id: templateId,
+    p_class_id: classId,
+    p_draft_name: draftName,
+    p_draft_description: draftDescription,
+    p_owner_id: ownerId,
+  });
+  if (error) throw error;
+  return data as ResolveResult;
+}
+
+export async function deleteDraft(id: number): Promise<void> {
+  const { error } = await supabase
+    .from('assignment_drafts')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function fetchClassesForFilter(): Promise<
+  { id: number; name: string }[]
+> {
+  const { data, error } = await supabase
+    .from('classes')
+    .select('id, name')
+    .is('archived_at', null)
+    .order('name');
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id as number,
+    name: row.name as string,
   }));
 }

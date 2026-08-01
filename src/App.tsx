@@ -47,6 +47,18 @@ function PageContent({
       return <AdminUsersPage />;
     case 'admin-question-library':
       return <AdminQuestionLibraryPage />;
+    case 'admin-classes':
+      return <TeacherClassesPage />;
+    case 'admin-courses':
+      return <TeacherCoursesPage />;
+    case 'admin-assignment-templates':
+      return <TeacherAssignmentTemplatesPage />;
+    case 'admin-assignments':
+      return <TeacherAssignmentsPage />;
+    case 'admin-grading':
+      return <TeacherGradingPage />;
+    case 'admin-students':
+      return <TeacherStudentsPage />;
     case 'teacher-dashboard':
       return <TeacherDashboard />;
     case 'teacher-classes':

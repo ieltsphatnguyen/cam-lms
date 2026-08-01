@@ -26,10 +26,16 @@ interface NavItem {
 const navByRole: Record<Role, NavItem[]> = {
   admin: [
     { label: 'Dashboard', page: 'admin-dashboard', icon: <LayoutDashboard size={18} /> },
+    { label: 'Classes', page: 'admin-classes', icon: <School size={18} /> },
+    { label: 'Courses', page: 'admin-courses', icon: <BookOpen size={18} /> },
+    { label: 'Question Bank', page: 'admin-question-library', icon: <BookOpen size={18} /> },
+    { label: 'Assignment Templates', page: 'admin-assignment-templates', icon: <FileText size={18} /> },
+    { label: 'Assignments', page: 'admin-assignments', icon: <ClipboardList size={18} /> },
+    { label: 'Grading', page: 'admin-grading', icon: <CheckSquare size={18} /> },
+    { label: 'Students', page: 'admin-students', icon: <Users size={18} /> },
     { label: 'Teachers', page: 'admin-teachers', icon: <Users size={18} /> },
     { label: 'Users', page: 'admin-users', icon: <UserCog size={18} /> },
     { label: 'Authentication', page: 'admin-auth', icon: <ShieldCheck size={18} /> },
-    { label: 'Question Bank', page: 'admin-question-library', icon: <BookOpen size={18} /> },
     { label: 'Profile', page: 'profile', icon: <UserCircle size={18} /> },
   ],
   teacher: [

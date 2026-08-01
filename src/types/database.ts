@@ -129,3 +129,59 @@ export interface DuplicateTemplateResult {
   id: number;
   name: string;
 }
+
+// ── Random Question Rules ──────────────────────────────────
+
+export interface RandomQuestionRule {
+  id: number;
+  template_id: number;
+  rule_order: number;
+  question_type_id: number;
+  response_type: ResponseType;
+  category: string | null;
+  tags: string[] | null;
+  created_at: string;
+}
+
+export interface RandomRuleInput {
+  question_type_id: number;
+  response_type: ResponseType;
+  category: string | null;
+  tags: string[] | null;
+}
+
+// ── Assignment Drafts ──────────────────────────────────────
+
+export type DraftStatus = 'draft' | 'published';
+
+export interface AssignmentDraft {
+  id: number;
+  name: string;
+  description: string | null;
+  template_id: number | null;
+  class_id: number | null;
+  owner_id: string;
+  status: DraftStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentDraftWithDetails extends AssignmentDraft {
+  owner_display_name: string;
+  question_count: number;
+  class_name: string | null;
+  template_name: string | null;
+}
+
+export interface AssignmentDraftQuestion {
+  id: number;
+  draft_id: number;
+  question_id: number;
+  selection_order: number;
+  created_at: string;
+}
+
+export interface ResolveResult {
+  draft_id: number;
+  unresolved_rules: number;
+}
