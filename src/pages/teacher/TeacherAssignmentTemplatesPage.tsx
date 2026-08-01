@@ -70,7 +70,7 @@ export default function TeacherAssignmentTemplatesPage() {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [ownerFilter, setOwnerFilter] = useState<string>('mine');
+  const [ownerFilter, setOwnerFilter] = useState<string>('everyone');
   const [statusFilter, setStatusFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [createdByFilter, setCreatedByFilter] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);

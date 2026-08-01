@@ -795,6 +795,7 @@ function RandomRuleModal({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    e.stopPropagation();
     if (!typeId) {
       setError('Question type is required.');
       return;
