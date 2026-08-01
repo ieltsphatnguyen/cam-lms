@@ -96,11 +96,11 @@ export default function QuestionPreview({ question, typeName }: Props) {
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
             Cue Card
           </p>
-          <p className="text-sm font-medium text-slate-800">
+          <p className="whitespace-pre-wrap text-sm font-medium text-slate-800">
             {question.content}
           </p>
           {question.description && (
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600">
               {question.description}
             </p>
           )}
@@ -135,7 +135,7 @@ export default function QuestionPreview({ question, typeName }: Props) {
       {isCustom && question.custom_instructions && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
           <p className="text-sm font-medium text-blue-800">Instructions</p>
-          <p className="mt-1 text-xs text-blue-700">
+          <p className="mt-1 whitespace-pre-wrap text-xs text-blue-700">
             {question.custom_instructions}
           </p>
         </div>
@@ -154,13 +154,13 @@ export default function QuestionPreview({ question, typeName }: Props) {
 
       {/* Description */}
       {question.description && !isSpeakingPart2 && (
-        <p className="text-sm text-slate-600">{question.description}</p>
+        <p className="whitespace-pre-wrap text-sm text-slate-600">{question.description}</p>
       )}
 
       {/* Prompt (not shown for Speaking Part 2 — it's in the cue card) */}
       {!isSpeakingPart2 && (
         <div className="rounded-xl bg-slate-50 p-4">
-          <p className="text-sm leading-relaxed text-slate-800">
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
             {question.content}
           </p>
         </div>

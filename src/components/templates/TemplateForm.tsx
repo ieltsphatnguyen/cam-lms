@@ -225,9 +225,9 @@ export default function TemplateForm({
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          rows={2}
+          rows={5}
           placeholder="What is this template for?"
-          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
+          className="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
         />
       </div>
 

@@ -440,7 +440,7 @@ export default function TeacherAssignmentTemplatesPage() {
                     {t.name}
                   </h3>
                   {t.description && (
-                    <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                    <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-slate-500">
                       {t.description}
                     </p>
                   )}

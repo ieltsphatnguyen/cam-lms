@@ -95,11 +95,11 @@ export default function TemplatePreview({
                     Preview
                   </button>
                 </div>
-                <p className="line-clamp-3 text-sm text-slate-600">
+                <p className="line-clamp-3 whitespace-pre-wrap text-sm text-slate-600">
                   {q.content}
                 </p>
                 {q.description && (
-                  <p className="mt-1 line-clamp-2 text-xs text-slate-400">
+                  <p className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-slate-400">
                     {q.description}
                   </p>
                 )}

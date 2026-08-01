@@ -577,7 +577,7 @@ export default function TeacherQuestionLibraryPage() {
                 </div>
 
                 {/* Prompt preview */}
-                <p className="mb-3 line-clamp-3 flex-1 text-xs text-slate-500">
+                <p className="mb-3 line-clamp-3 flex-1 whitespace-pre-wrap text-xs text-slate-500">
                   {q.content}
                 </p>
 

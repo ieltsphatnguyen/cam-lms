@@ -83,7 +83,7 @@ export default function SimilarQuestionsDialog({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="line-clamp-2 text-sm font-medium text-slate-800">
+                  <p className="line-clamp-2 whitespace-pre-wrap text-sm font-medium text-slate-800">
                     {sq.content}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
