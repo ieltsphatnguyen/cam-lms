@@ -1,0 +1,131 @@
+export type Role = 'admin' | 'teacher' | 'student';
+
+export interface Profile {
+  id: string;
+  role: Role;
+  teacher_id: number | null;
+  student_id: number | null;
+  created_at: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+export interface Teacher {
+  id: number;
+  name: string;
+}
+
+export interface Student {
+  id: number;
+  name: string;
+}
+
+export interface Class {
+  id: number;
+  name: string;
+  class_code: string | null;
+}
+
+export interface ClassStudent {
+  id: number;
+  student_id: number | null;
+  class_id: number | null;
+}
+
+export interface TeacherClass {
+  id: number;
+  teacher_id: number;
+  class_id: number;
+}
+
+// Enriched types used in UI queries
+export interface ClassWithStudentCount extends Class {
+  student_count: number;
+}
+
+export interface ClassWithTeacher extends Class {
+  teacher_name?: string;
+}
+
+export interface EnrolledClass extends Class {
+  enrolled_at?: string;
+}
+
+// ── Question Bank ──────────────────────────────────────────
+
+export type ResponseType = 'text' | 'audio';
+export type QuestionStatus = 'active' | 'archived';
+
+export interface QuestionType {
+  id: number;
+  name: string;
+}
+
+export interface Question {
+  id: number;
+  content: string;
+  description: string | null;
+  ielts_band: string | null;
+  category: string | null;
+  category_secondary: string | null;
+  tags: string[] | null;
+  response_type: ResponseType;
+  image_url: string | null;
+  owner_id: string | null;
+  type_id: number;
+  category_id: number | null;
+  created_by: number | null;
+  status: QuestionStatus;
+  archived_at: string | null;
+  custom_type_name: string | null;
+  custom_instructions: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QuestionWithDetails extends Question {
+  type_name: string;
+  owner_display_name: string;
+}
+
+export interface SimilarQuestion {
+  id: number;
+  content: string;
+  type_name: string;
+  category: string | null;
+  response_type: ResponseType;
+  owner_display_name: string;
+  sim: number;
+}
+
+// ── Assignment Templates ───────────────────────────────────
+
+export type TemplateStatus = 'active' | 'archived';
+
+export interface AssignmentTemplate {
+  id: number;
+  name: string;
+  description: string | null;
+  owner_id: string;
+  status: TemplateStatus;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentTemplateWithDetails extends AssignmentTemplate {
+  owner_display_name: string;
+  question_count: number;
+}
+
+export interface TemplateQuestion {
+  id: number;
+  template_id: number;
+  question_id: number;
+  selection_order: number;
+}
+
+export interface DuplicateTemplateResult {
+  id: number;
+  name: string;
+}
