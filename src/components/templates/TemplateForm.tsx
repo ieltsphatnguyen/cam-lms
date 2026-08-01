@@ -793,9 +793,7 @@ function RandomRuleModal({
     ? CATEGORY_OPTIONS[typeId] ?? []
     : [];
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  function handleAddRuleClick() {
     if (!typeId) {
       setError('Question type is required.');
       return;
@@ -824,7 +822,7 @@ function RandomRuleModal({
       title="Add Random Question Rule"
       size="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
         {error && (
           <div className="flex items-start gap-2.5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />
@@ -928,11 +926,11 @@ function RandomRuleModal({
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" icon={<Shuffle size={16} />}>
+          <Button type="button" icon={<Shuffle size={16} />} onClick={handleAddRuleClick}>
             Add Rule
           </Button>
         </div>
-      </form>
+      </div>
     </Modal>
   );
 }
