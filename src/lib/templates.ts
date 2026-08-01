@@ -489,14 +489,12 @@ export async function resolveTemplateToDraft(
   classId: number | null,
   draftName: string,
   draftDescription: string | null,
-  ownerId: string,
 ): Promise<ResolveResult> {
   const { data, error } = await supabase.rpc('resolve_template_to_draft', {
     p_template_id: templateId,
     p_class_id: classId,
     p_draft_name: draftName,
     p_draft_description: draftDescription,
-    p_owner_id: ownerId,
   });
   if (error) throw error;
   return data as ResolveResult;

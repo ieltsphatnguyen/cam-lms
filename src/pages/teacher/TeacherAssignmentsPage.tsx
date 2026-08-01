@@ -155,7 +155,6 @@ export default function TeacherAssignmentsPage() {
         selectedClassId || null,
         draftName.trim() || selectedTemplate.name,
         draftDescription.trim() || null,
-        currentUserId,
       );
       setResolveResult({
         draftId: result.draft_id,
